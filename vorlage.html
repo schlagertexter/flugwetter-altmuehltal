@@ -190,7 +190,8 @@ footer{color:var(--ink2);font-size:12px;margin-top:18px}
   <section class="karte">
     <h2 id="h-dwd">DWD-Segelflugvorhersage</h2>
     <p class="meta" id="dwd-meta" style="margin:0 0 10px"></p>
-    <div class="scroll" id="dwd"></div>
+    <div id="dwd-bild"></div>
+    <details id="dwd-details" style="margin-top:12px"><summary>Werte als Tabelle</summary><div class="scroll" id="dwd"></div></details>
   </section>
 
   <section class="karte" id="sek-rueck">
@@ -743,7 +744,7 @@ function initCharts() {
     zeigeStunde(Math.max(0, Math.min(G.n - 1, start + (e.key === 'ArrowRight' ? 1 : -1))), null);
   });
   let warte = null;
-  window.addEventListener('resize', () => { clearTimeout(warte); warte = setTimeout(() => { st.stunde = null; renderCharts(); }, 120); });
+  window.addEventListener('resize', () => { clearTimeout(warte); warte = setTimeout(() => { st.stunde = null; renderCharts(); renderDwd(); }, 120); });
 }
 
 /* ------------------------------------------------------------ Tabellen, Livewind */
@@ -792,6 +793,69 @@ function dwdStunde(zeit) {
   return D.dwd ? D.dwd.stunden.find(s => s.zeit === zeit) : null;
 }
 
+/* DWD-Bericht als Bild: Zeilen = Höhen und Größen, Spalten = Stunden. Eigene Werte stehen direkt unter dem DWD-Wert. */
+function dwdBild(stunden, eigen, o) {
+  const wrap = $('#dwd-bild'), g = D.grenzwerte;
+  const paar = (v, d) => (v == null || d == null ? null : [v, d]);
+  const zeilen = [
+    { l: '3048 m · DWD', art: 'wind', w: s => s.w3048 },
+    { l: '1524 m · DWD', art: 'wind', w: s => s.w1524 },
+    { l: 'ca. 1500 m · eigen', art: 'wind', eigen: true, w: (s, x) => x && paar(x.w15_v, x.w15_d) },
+    { l: '914 m · DWD', art: 'wind', ampel: true, w: s => s.w914, luecke: true },
+    { l: 'Arbeitsschicht · eigen', art: 'wind', eigen: true, w: (s, x) => x && paar(x.hw_v, x.hw_d) },
+    { l: 'Boden · DWD', art: 'wind', w: s => paar(s.v10, s.d10), luecke: true },
+    { l: `10 m · ${o.ort.name}`, art: 'wind', eigen: true, w: (s, x) => x && paar(x.v10, x.d10) },
+    { l: 'Böen · DWD', art: 'zahl', farbe: 's2', max: 60, v: s => s.boe, luecke: true },
+    { l: 'Böen · eigen', art: 'zahl', farbe: 's2', max: 60, eigen: true, v: (s, x) => (x ? x.boe : null) },
+    { l: 'Wolken hoch · DWD', art: 'zahl', farbe: 'cloud', max: 8, einheit: '/8', v: s => s.wolken_hoch, luecke: true },
+    { l: 'Wolken mittel · DWD', art: 'zahl', farbe: 'cloud', max: 8, einheit: '/8', v: s => s.wolken_mittel },
+    { l: 'Wolken tief · DWD', art: 'zahl', farbe: 'cloud', max: 8, einheit: '/8', v: s => s.wolken_tief },
+    { l: 'Wetter · DWD', art: 'text', v: s => s.wetter },
+  ];
+  const W = Math.max(320, wrap.clientWidth), L = 150, n = stunden.length, bw = (W - L) / n, top = 22;
+  let H = top;
+  zeilen.forEach(z => { if (z.luecke) H += 10; z.y = H; z.h = z.art === 'wind' ? 42 : 24; H += z.h + 2; });
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, height: H, role: 'img', style: 'display:block;width:100%',
+    'aria-label': 'DWD-Segelflugvorhersage je Stunde und Höhe, eigene Werte zum Vergleich' });
+  const schritt = bw >= 34 ? 1 : bw >= 17 ? 2 : 3;
+  stunden.forEach((st0, i) => { if (i % schritt === 0) text(svg, L + (i + 0.5) * bw, 13, `${+st0.zeit.slice(11, 13)} h`, { 'text-anchor': 'middle' }); });
+  zeilen.forEach(z => {
+    text(svg, L - 8, z.y + z.h / 2 + 4, z.l, { 'text-anchor': 'end', class: z.eigen ? '' : 'ink' });
+    stunden.forEach((st0, i) => {
+      const x = eigen[st0.zeit], x0 = L + i * bw + 1, cx = L + (i + 0.5) * bw, bb = Math.max(1, bw - 2);
+      const zelle = s('g', {}, svg);
+      const rect = s('rect', { x: x0, y: z.y, width: bb, height: z.h, rx: 4 }, zelle);
+      const leer = () => rect.setAttribute('style', 'fill:color-mix(in srgb,var(--neutral) 7%,var(--surface))');
+      const titel = t => { s('title', {}, zelle).textContent = `${st0.zeit.slice(11)} Uhr · ${z.l}: ${t}`; };
+      if (z.art === 'wind') {
+        const p = z.w(st0, x);
+        if (!p) { leer(); return; }
+        const [v, d] = p;
+        const farbe = z.ampel ? (v >= g.dwd_hoehenwind_rot_kmh ? 'critical' : v >= g.dwd_hoehenwind_gelb_kmh ? 'warning' : 'good') : 's1';
+        rect.setAttribute('style', `fill:color-mix(in srgb,var(--${farbe}) ${z.ampel ? 32 : Math.round(Math.min(55, 6 + v * 0.8))}%,var(--surface))`);
+        if (v < g.wind_kaum_kmh) s('circle', { cx, cy: z.y + 14, r: 3, fill: 'none', stroke: 'var(--ink2)', 'stroke-width': 1.5 }, zelle);
+        else s('path', { d: 'M0,-10 L0,9 M-5,3 L0,10 L5,3', fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+          transform: `translate(${cx} ${z.y + 14}) scale(.72) rotate(${d})` }, zelle);
+        if (bw >= 20) text(zelle, cx, z.y + z.h - 6, Math.round(v), { 'text-anchor': 'middle', class: 'ink', style: 'font-weight:600' });
+        titel(wind(v, d));
+      } else if (z.art === 'zahl') {
+        const v = z.v(st0, x);
+        if (v == null) { leer(); return; }
+        rect.setAttribute('style', `fill:color-mix(in srgb,var(--${z.farbe}) ${Math.round(Math.min(55, 4 + v / z.max * 55))}%,var(--surface))`);
+        if (bw >= 20) text(zelle, cx, z.y + z.h / 2 + 4, Math.round(v), { 'text-anchor': 'middle', class: 'ink' });
+        titel(`${Math.round(v)}${z.einheit || ' km/h'}`);
+      } else {
+        const v = z.v(st0, x);
+        leer();
+        if (v) { text(zelle, cx, z.y + z.h / 2 + 4, bw >= 36 ? v : '•', { 'text-anchor': 'middle', class: 'ink', style: 'font-weight:600' }); titel(v); }
+      }
+    });
+  });
+  wrap.replaceChildren(svg, h('p', { class: 'notiz', style: 'margin:8px 0 0' },
+    'Pfeil = Richtung, in die der Wind weht; Zahl = km/h; Kreis = kaum Wind. Je kräftiger die Fläche, desto stärker der Wind bzw. dichter die Bewölkung (Achtel). ' +
+    `Die Zeile 914 m trägt Ampelfarben (gelb ab ${g.dwd_hoehenwind_gelb_kmh}, rot ab ${g.dwd_hoehenwind_rot_kmh} km/h), weil sie in die Ampel eingeht. Graue Zeilenbeschriftung = eigene Werte zum Vergleich.`));
+}
+
 function renderDwd() {
   const o = ort(), ziel = $('#dwd'), meta = $('#dwd-meta'), dwd = D.dwd;
   if (!dwd) {
@@ -804,12 +868,15 @@ function renderDwd() {
   meta.replaceChildren(`Referenzstation ${dwd.station} · ausgegeben ${dwd.ausgabe} · ${dwd.modell} · zweite Quelle der Ampel am Tag des Berichts (Böen, Wind in 914 m, Wettercode, tiefe Bewölkung) · `,
     h('a', { href: dwd.url, target: '_blank', rel: 'noopener' }, 'Quelle: Deutscher Wetterdienst'));
   const stunden = tag().datum === dwd.datum ? dwd.stunden.filter(s => s.zeit.startsWith(dwd.datum)) : [];
+  $('#dwd-details').hidden = !stunden.length;
   if (!stunden.length) {
     const d = dwd.datum.split('-');
-    ziel.replaceChildren(h('p', { class: 'notiz', style: 'margin:0' }, `Der Bericht gilt für den ${d[2]}.${d[1]}.${d[0]}; für den gewählten Tag liegt keiner vor.`));
+    ziel.replaceChildren();
+    $('#dwd-bild').replaceChildren(h('p', { class: 'notiz', style: 'margin:0' }, `Der Bericht gilt für den ${d[2]}.${d[1]}.${d[0]}; für den gewählten Tag liegt keiner vor.`));
     return;
   }
   const eigen = Object.fromEntries(o.stunden.map(x => [x.zeit, x]));
+  dwdBild(stunden, eigen, o);
   const w = p => (p ? wind(p[0], p[1]) : '–');
   const achtel = v => (v == null ? '–' : Math.round(v / 12.5));
   const zeilen = stunden.map(s => {
