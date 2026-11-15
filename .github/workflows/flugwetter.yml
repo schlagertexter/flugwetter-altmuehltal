@@ -45,7 +45,15 @@ jobs:
       - name: Vorhersage rechnen
         if: steps.zeit.outputs.laufen == 'ja'
         run: |
-          python flugwetter.py --ohne-abgleich > /dev/null
+          # Die Wetterdienste sind von hier aus nicht immer sofort erreichbar: bis zu fünf Versuche.
+          # Scheitern alle, bricht der Lauf ab und die bisherige Seite bleibt online.
+          ok=nein
+          for versuch in 1 2 3 4 5; do
+            if python flugwetter.py --ohne-abgleich > /dev/null; then ok=ja; break; fi
+            echo "Versuch $versuch fehlgeschlagen, neuer Versuch in 90 Sekunden."
+            sleep 90
+          done
+          [ "$ok" = "ja" ]
           mkdir -p site
           cp vorhersagen/flugwetter_aktuell.html site/index.html
       - uses: actions/configure-pages@v5
