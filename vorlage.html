@@ -867,7 +867,10 @@ function renderDwd() {
   $('#h-dwd').textContent = `DWD-Segelflugvorhersage · ${dwd.gebiet}`;
   meta.replaceChildren(`Referenzstation ${dwd.station} · ausgegeben ${dwd.ausgabe} · ${dwd.modell} · zweite Quelle der Ampel am Tag des Berichts (Böen, Wind in 914 m, Wettercode, tiefe Bewölkung) · `,
     h('a', { href: dwd.url, target: '_blank', rel: 'noopener' }, 'Quelle: Deutscher Wetterdienst'));
-  const stunden = tag().datum === dwd.datum ? dwd.stunden.filter(s => s.zeit.startsWith(dwd.datum)) : [];
+  // Nur der Zeitraum der Zeitstufen (9 bis 20 Uhr) wird gezeigt
+  const stundeVon = Math.min(...tag().orte[0].stufen.map(z => z.von)), stundeBis = Math.max(...tag().orte[0].stufen.map(z => z.bis));
+  const stunden = tag().datum === dwd.datum
+    ? dwd.stunden.filter(s => s.zeit.startsWith(dwd.datum) && +s.zeit.slice(11, 13) >= stundeVon && +s.zeit.slice(11, 13) <= stundeBis) : [];
   $('#dwd-details').hidden = !stunden.length;
   if (!stunden.length) {
     const d = dwd.datum.split('-');
