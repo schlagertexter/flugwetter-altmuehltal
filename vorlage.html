@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flugwetter Böhming · Oberemmendorf</title>
+<style>
+:root{
+  color-scheme:light;
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s5:#e87ba4; --s7:#6250d6;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b; --neutral:#898781;
+  --cloud:#52514e; --rain:#2a78d6;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s5:#d55181; --s7:#9085e9;
+    --cloud:#c3c2b7; --rain:#3987e5;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1120px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:20px;margin:0}
+h2{font-size:14px;margin:0 0 10px;font-weight:600}
+a{color:inherit}
+.meta{color:var(--ink2);font-size:12.5px;margin:4px 0 14px}
+.karte{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:14px}
+.filter{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;color:var(--ink2);padding:7px 14px;font:inherit;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--surface);font-weight:600}
+button:focus-visible,.charts:focus-visible,summary:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+
+.st-good{--c:var(--good)} .st-warning{--c:var(--warning)} .st-serious{--c:var(--serious)}
+.st-critical{--c:var(--critical)} .st-neutral{--c:var(--neutral)}
+.pkt{width:17px;height:17px;border-radius:50%;background:var(--c);color:#fff;font-size:11px;line-height:17px;
+  text-align:center;flex:none;font-weight:700;display:inline-block}
+.st-warning .pkt{color:#0b0b0b}
+
+.gitter{display:grid;grid-template-columns:minmax(104px,1.1fr) repeat(var(--n,4),minmax(0,1fr));gap:6px;align-items:stretch}
+.gitter .kopf{color:var(--muted);font-size:12px;padding:0 2px 2px}
+.platz{display:flex;flex-direction:column;justify-content:center;padding:4px 2px}
+.platz b{font-size:14px} .platz span{color:var(--ink2);font-size:12px}
+.zelle{border:1px solid var(--border);border-radius:8px;padding:8px 10px;text-align:left;font:inherit;color:var(--ink);
+  cursor:pointer;background:color-mix(in srgb,var(--c) 13%,var(--surface));display:flex;flex-direction:column;gap:2px;min-height:58px;min-width:0}
+.zelle:hover{background:color-mix(in srgb,var(--c) 22%,var(--surface))}
+.zelle[aria-pressed=true]{outline:2px solid var(--ink);outline-offset:1px}
+.zelle .st{display:flex;align-items:center;gap:6px;font-weight:600}
+.zelle .sub{color:var(--ink2);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zelle .vl{color:var(--ink);font-size:12px}
+.amp{display:inline-flex;align-items:center;gap:6px}
+#zus p{margin:0 0 8px;max-width:78ch} #zus p:last-child{margin-bottom:0} #zus .kern{font-size:15px;font-weight:600}
+
+.dkopf{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:12px}
+.dkopf h2{margin:0;font-size:16px}
+.marke{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px 3px 4px;font-weight:600;
+  background:color-mix(in srgb,var(--c) 16%,var(--surface));border:1px solid var(--border)}
+.detail{display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px}
+@media(max-width:780px){.detail{grid-template-columns:minmax(0,1fr)}}
+.rose h3{font-size:12.5px;font-weight:600;margin:0 0 2px;color:var(--ink2)}
+.rose svg{max-width:320px;margin:0 auto}
+.rl{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:2px 0}
+.rl span{color:var(--ink2);flex:1} .rl b{font-weight:600}
+.rl svg{width:16px;height:16px;flex:none;margin:0}
+.rand{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--ink2);margin-top:8px}
+.rand i{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--c);margin-right:5px}
+.kacheln{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px}
+.kachel{border:1px solid var(--border);border-radius:8px;padding:10px 12px;min-width:0}
+.kachel .l{color:var(--ink2);font-size:12px} .kachel .v{font-size:18px;font-weight:600;margin:2px 0}
+.kachel .s{color:var(--ink2);font-size:12px}
+.gruende{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.gruende li{border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:12.5px}
+.gruende li.g{background:color-mix(in srgb,var(--c) 14%,var(--surface))}
+.notiz{color:var(--ink2);font-size:12.5px;margin:12px 0 0}
+
+.charts{position:relative;border-radius:6px}
+figure{margin:16px 0 0}
+figure:first-of-type{margin-top:4px}
+figcaption{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;font-size:12.5px;color:var(--ink2);margin-bottom:4px}
+figcaption b{color:var(--ink);font-weight:600}
+.leg{display:inline-flex;align-items:center;gap:5px}
+.leg i{display:inline-block;width:14px;height:0;border-top:2px solid var(--c)}
+.leg i.box{height:10px;width:10px;border:0;background:color-mix(in srgb,var(--c) 30%,var(--surface));border-radius:2px;outline:1px solid var(--border)}
+.charts svg{display:block;width:100%;overflow:visible}
+svg text{font:11px system-ui,-apple-system,"Segoe UI",sans-serif;fill:var(--muted);font-variant-numeric:tabular-nums}
+svg text.ink{fill:var(--ink2)}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.16);padding:8px 10px;font-size:12.5px;width:250px;z-index:5;display:none}
+.tip h3{margin:0 0 4px;font-size:12.5px}
+.tip .r{display:flex;gap:10px;align-items:baseline;justify-content:space-between;padding:1px 0}
+.tip .r span{color:var(--ink2)} .tip .r b{font-weight:600;text-align:right}
+.tip .k{display:inline-block;width:12px;border-top:2px solid var(--c);margin-right:6px;vertical-align:middle}
+
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:5px 10px 5px 0;border-bottom:1px solid var(--grid);white-space:nowrap}
+th{color:var(--ink2);font-weight:600} td{font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;font-weight:600}
+details[open] summary{margin-bottom:10px}
+.live{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.knopf{border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);padding:7px 14px;font:inherit;cursor:pointer}
+.knopf:hover{background:color-mix(in srgb,var(--ink) 6%,var(--surface))}
+iframe{width:100%;height:330px;border:1px solid var(--border);border-radius:8px;margin-top:12px;background:#fff}
+footer{color:var(--ink2);font-size:12px;margin-top:18px}
+</style>
+</head>
+<body>
+<main>
+  <h1 id="titel">Flugwetter</h1>
+  <p class="meta" id="meta"></p>
+  <div class="filter" id="filter"></div>
+
+  <section class="karte" id="sek-zus" aria-labelledby="h-zus">
+    <h2 id="h-zus">Zusammenfassung</h2>
+    <div id="zus"></div>
+  </section>
+
+  <section class="karte" aria-labelledby="h-ueb">
+    <h2 id="h-ueb">Welcher Startplatz geht wann?</h2>
+    <div class="gitter" id="gitter"></div>
+  </section>
+
+  <section class="karte">
+    <div class="dkopf" id="dkopf"></div>
+    <div class="detail">
+      <div class="rose">
+        <h3 id="rosetitel"></h3>
+        <svg id="rose" viewBox="0 0 320 320" role="img" aria-label="Windrose mit Startfenster"></svg>
+        <div id="roselegende"></div>
+        <div class="rand" id="rand"></div>
+      </div>
+      <div>
+        <div class="kacheln" id="kacheln"></div>
+        <ul class="gruende" id="gruende"></ul>
+        <p class="notiz" id="notiz"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="karte">
+    <h2 id="h-verlauf">Tagesverlauf</h2>
+    <div class="charts" id="charts" tabindex="0" aria-label="Tagesverlauf, mit Pfeiltasten stundenweise ablesbar">
+      <figure>
+        <figcaption><b>Ampel je Stunde</b><span>dieselben Regeln wie für die Zeitstufe, auf jede Stunde einzeln angewandt</span></figcaption>
+        <svg id="c-ampel" role="img" aria-label="Ampel je Stunde"></svg>
+      </figure>
+      <figure>
+        <figcaption><b>Wind in km/h</b>
+          <span class="leg" style="--c:var(--s1)"><i></i>Startwind 80 m</span>
+          <span class="leg" style="--c:var(--s2)"><i></i>Böen</span>
+          <span class="leg" style="--c:var(--s3)"><i></i>Bodenwind 10 m</span>
+          <span class="leg" style="--c:var(--good)"><i class="box"></i>Startwind grün</span>
+        </figcaption>
+        <svg id="c-wind" role="img" aria-label="Wind im Tagesverlauf"></svg>
+      </figure>
+      <figure>
+        <figcaption><b>Windrichtung zum Startfenster</b><span id="leg-rk"></span></figcaption>
+        <svg id="c-richtung" role="img" aria-label="Windrichtung je Stunde"></svg>
+      </figure>
+      <figure>
+        <figcaption><b>Steigen in m/s</b><span>w* abzüglich Eigensinken</span></figcaption>
+        <svg id="c-steigen" role="img" aria-label="Thermisches Steigen je Stunde"></svg>
+      </figure>
+      <figure>
+        <figcaption><b>Thermikhöhe in m MSL</b>
+          <span class="leg" style="--c:var(--s7)"><i></i>Thermikobergrenze (Median der Modelle)</span>
+          <span class="leg" style="--c:var(--s5)"><i></i>Kondensationshöhe</span>
+        </figcaption>
+        <svg id="c-hoehe" role="img" aria-label="Thermikobergrenze und Kondensationshöhe"></svg>
+      </figure>
+      <figure>
+        <figcaption><b>Wolken und Niederschlag</b><span>je kräftiger die Fläche, desto mehr Bedeckung bzw. Regen</span></figcaption>
+        <svg id="c-wolken" role="img" aria-label="Bewölkung und Niederschlag je Stunde"></svg>
+      </figure>
+      <div class="tip" id="tip"></div>
+    </div>
+  </section>
+
+  <section class="karte">
+    <h2 id="h-modelle">Modellvergleich Startwind</h2>
+    <div class="scroll" id="modelle"></div>
+  </section>
+
+  <section class="karte">
+    <h2 id="h-dwd">DWD-Segelflugvorhersage</h2>
+    <p class="meta" id="dwd-meta" style="margin:0 0 10px"></p>
+    <div class="scroll" id="dwd"></div>
+  </section>
+
+  <section class="karte" id="sek-rueck">
+    <h2 id="h-rueck">Rückschau: Prognose gegen Messung</h2>
+    <p class="meta" id="rueck-meta" style="margin:0 0 10px"></p>
+    <div class="scroll" id="rueck"></div>
+  </section>
+
+  <section class="karte">
+    <details id="tabdetails"><summary>Stundentabelle</summary><div class="scroll" id="tabelle"></div></details>
+  </section>
+
+  <section class="karte">
+    <h2 id="h-live">Livewind</h2>
+    <div class="live" id="live"></div>
+    <div id="liveframe"></div>
+  </section>
+
+  <footer id="fuss"></footer>
+</main>
+
+<script>
+const D = /*DATEN*/null;
+const NS = 'http://www.w3.org/2000/svg';
+const KOMP = ['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+const komp = d => KOMP[Math.floor(((d + 11.25) % 360) / 22.5)];
+const num = (x, n = 0) => (x == null ? '–' : x.toFixed(n).replace('.', ','));
+const wind = (v, d) => (v == null || d == null ? '–' : `${komp(d)} ${Math.round(d)}° · ${Math.round(v)} km/h`);
+const hoehe = x => (x == null ? '–' : (Math.round(x / 10) * 10).toLocaleString('de-DE') + ' m');
+const $ = sel => document.querySelector(sel);
+
+function h(tag, attrs = {}, ...kinder) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const kind of kinder) if (kind != null) e.append(kind);
+  return e;
+}
+function s(tag, attrs = {}, eltern) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (eltern) eltern.appendChild(e);
+  return e;
+}
+function text(eltern, x, y, inhalt, attrs = {}) {
+  const t = s('text', Object.assign({ x, y }, attrs), eltern);
+  t.textContent = inhalt;
+  return t;
+}
+
+const STATUS = [
+  { cls: 'st-good', icon: '✓', label: 'grün' },
+  { cls: 'st-warning', icon: '!', label: 'gelb' },
+  { cls: 'st-critical', icon: '✕', label: 'rot' },
+];
+const DUNKEL = { cls: 'st-neutral', icon: '☾', label: 'dunkel' };
+const RK = {
+  fenster: { farbe: 'good', label: 'im Fenster' },
+  schraeg: { farbe: 'warning', label: 'schräg' },
+  quer: { farbe: 'serious', label: 'quer' },
+  lee: { farbe: 'critical', label: 'Lee' },
+  kaum: { farbe: 'neutral', label: 'kaum Wind' },
+};
+
+const st = { tag: 0, ort: 0, stufe: 0, stunde: null };
+const tag = () => D.tage[st.tag];
+const ort = () => tag().orte[st.ort];
+const status = z => (z.dunkel ? DUNKEL : STATUS[z.stufe]);
+
+function besteWahl() {
+  let best = null;
+  tag().orte.forEach((o, oi) => o.stufen.forEach((z, zi) => {
+    if (z.dunkel) return;
+    if (!best || z.stufe < best.stufe) best = { stufe: z.stufe, o: oi, z: zi };
+  }));
+  st.ort = best ? best.o : 0;
+  st.stufe = best ? best.z : 0;
+  st.stunde = null;
+}
+
+/* ------------------------------------------------------------ Kopf, Filter, Überblick */
+
+function renderKopf() {
+  $('#titel').textContent = `${D.titel} ${D.gebiet} – Gleitschirm`;
+  $('#meta').textContent = `Erstellt ${D.erstellt} · Hauptmodell ${D.hauptmodell} über Open-Meteo · ` +
+    'Modellschätzung, Grenzwerte nicht am Gelände geeicht. Vor dem Start Livewind und Gelände selbst beurteilen.';
+  const g = D.grenzwerte, t = D.thermik;
+  const fuss = $('#fuss');
+  fuss.replaceChildren(
+    h('p', {}, `Ampel: Startrichtung grün bis ±${g.richtung_gruen_grad}°, gelb bis ±${g.richtung_gelb_grad}°; ` +
+      `Startwind grün ${g.wind_min_gruen_kmh}–${g.wind_max_gruen_kmh} km/h, rot über ${g.wind_rot_kmh} km/h; ` +
+      `Böen gelb ab ${g.boe_gelb_kmh}, rot ab ${g.boe_rot_kmh} km/h; Höhenwind gelb ab ${g.hoehenwind_gelb_kmh}, rot ab ${g.hoehenwind_rot_kmh} km/h; ` +
+      `Windscherung gelb ab ${g.scherung_richtung_grad}° Drehung oder ${g.scherung_staerke_kmh} km/h Zunahme bis zur Arbeitshöhe; ` +
+      `tiefe Wolkendecke gelb ab ${Math.round(g.tiefwolken_gelb_prozent / 12.5)}/8, rot bei Kondensationshöhe unter ${g.wolkenbasis_rot_m} m über Start; ` +
+      `Sicht gelb unter ${g.sicht_gelb_m / 1000} km, rot unter ${g.sicht_rot_m} m.`),
+    h('p', {}, `DWD-Segelflugvorhersage als zweite Quelle, nur am Tag des Berichts: Wind in 914 m gelb ab ${g.dwd_hoehenwind_gelb_kmh}, rot ab ${g.dwd_hoehenwind_rot_kmh} km/h; ` +
+      'Niederschlag, Nebel oder Gewitter im Wettercode rot; die stärkere Böe beider Quellen zählt; tiefe Bewölkung der Referenzstation ab 6/8 gelb.'),
+    h('p', {}, `Startwind = Modellwind in ${D.startwind_quelle === '80m' ? '80 m' : '10 m'} über Grund als Näherung für die Hangkante. ` +
+      `Thermikobergrenze: trockenadiabatischer Aufstieg ab Startplatztemperatur (+${num(t.ueberwaerme_k, 1)} K) gegen das Temperaturprofil, je Modell gerechnet, Median gemeldet. ` +
+      `Steigen = w* minus ${num(t.eigensinken_ms, 1)} m/s Eigensinken. Liegt w* darunter, aber bei mindestens ${num(t.hangthermik_w_stern_ms, 1)} m/s, ` +
+      'gilt die Thermik als nur mit Hangaufwind nutzbar; als mögliche Höhe steht dann die Durchmischungshöhe.'),
+    h('p', {}, 'Stundenampel: dieselben Regeln, auf jede Stunde einzeln angewandt. Eine Zeitstufe ist nie besser als ihre schlechteste Stunde. ' +
+      'Rückschau: erster gespeicherter Lauf eines vergangenen Tages gegen die Messwerte der Holfuy-Station; die Windampel wertet nur Richtung, Stärke und Böen.'),
+    h('p', {}, h('b', {}, 'Haftungshinweis: '), 'Private, automatisch erzeugte Modellauswertung ohne Gewähr. Sie ist keine Flugwetterberatung und keine Startfreigabe. ' +
+      'Die Grenzwerte sind nicht am Gelände geeicht; die Ampel kann falsch liegen. Jeder Pilot entscheidet selbst und beachtet die Geländeregeln des Geländehalters.'),
+    h('p', {}, 'Datenquellen: Wettermodelle über Open-Meteo.com (CC BY 4.0); Segelflug-Gebietsvorhersage: Deutscher Wetterdienst.'),
+    ...(D.impressum ? [h('p', {}, h('b', {}, 'Impressum: '), [D.impressum.name, D.impressum.anschrift, D.impressum.email].filter(Boolean).join(' · '))] : []),
+    ...(D.warnungen || []).map(w => h('p', {}, 'Warnung: ' + w)));
+}
+
+function renderFilter() {
+  const f = $('#filter');
+  const tage = h('div', { class: 'seg', role: 'group', 'aria-label': 'Tag' });
+  D.tage.forEach((t, i) => {
+    const vor = D.rueckblick ? '' : (i === 0 ? 'Heute · ' : i === 1 ? 'Morgen · ' : '');
+    tage.append(h('button', {
+      'aria-pressed': String(i === st.tag),
+      onclick: () => { st.tag = i; besteWahl(); render(); },
+    }, vor + t.kurz));
+  });
+  const orte = h('div', { class: 'seg', role: 'group', 'aria-label': 'Startplatz' });
+  tag().orte.forEach((o, i) => orte.append(h('button', {
+    'aria-pressed': String(i === st.ort),
+    onclick: () => { st.ort = i; st.stunde = null; render(); },
+  }, o.ort.name)));
+  f.replaceChildren(tage, orte);
+}
+
+function renderZusammenfassung() {
+  const t = tag(), sek = $('#sek-zus');
+  const teile = t.orte.filter(o => o.zusammenfassung);
+  sek.hidden = !t.zusammenfassung && !teile.length;
+  $('#h-zus').textContent = `Zusammenfassung ${t.titel}`;
+  $('#zus').replaceChildren(
+    t.zusammenfassung ? h('p', { class: 'kern' }, t.zusammenfassung) : null,
+    ...teile.map(o => h('p', {}, h('b', {}, o.ort.name + ': '), o.zusammenfassung)));
+}
+
+function renderUeberblick() {
+  const g = $('#gitter');
+  const stufen = tag().orte[0].stufen;
+  g.style.setProperty('--n', stufen.length);
+  g.replaceChildren(h('div', { class: 'kopf' }));
+  stufen.forEach(z => g.append(h('div', { class: 'kopf' }, `${z.name} ${z.von}–${z.bis}`)));
+  tag().orte.forEach((o, oi) => {
+    g.append(h('div', { class: 'platz' },
+      h('b', {}, o.ort.name),
+      h('span', {}, `Start ${o.ort.startrichtung} · ${o.ort.hoehe_m} m`)));
+    o.stufen.forEach((z, zi) => {
+      const s0 = status(z);
+      const sub = z.dunkel ? 'kein Tageslicht'
+        : (z.sv == null ? 'keine Winddaten' : `${komp(z.sd)} ${Math.round(z.sv)} · Böen ${num(z.boe)}`);
+      g.append(h('button', {
+        class: 'zelle ' + s0.cls,
+        'aria-pressed': String(oi === st.ort && zi === st.stufe),
+        'aria-label': `${o.ort.name}, ${z.name}: ${s0.label}, ${sub}` + (z.verlauf ? `, ${z.verlauf}` : ''),
+        onclick: () => { st.ort = oi; st.stufe = zi; st.stunde = null; render(); },
+      },
+        h('span', { class: 'st' }, h('span', { class: 'pkt' }, s0.icon), s0.label),
+        h('span', { class: 'sub' }, sub),
+        z.verlauf ? h('span', { class: 'vl' }, z.verlauf) : null));
+    });
+  });
+}
+
+/* ------------------------------------------------------------ Detail und Windrose */
+
+function kachel(label, wert, sub) {
+  return h('div', { class: 'kachel' }, h('div', { class: 'l' }, label), h('div', { class: 'v' }, wert), h('div', { class: 's' }, sub || ''));
+}
+
+function renderDetail() {
+  const o = ort(), z = o.stufen[st.stufe], s0 = status(z), p = o.ort;
+  $('#dkopf').replaceChildren(
+    h('h2', {}, `${p.name} · ${z.name} ${z.von}–${z.bis} Uhr`),
+    h('span', { class: 'marke ' + s0.cls }, h('span', { class: 'pkt' }, s0.icon), s0.label),
+    h('span', { class: 'meta', style: 'margin:0' }, `Start ${p.startrichtung} (${p.startrichtung_grad}°) · ${p.hoehe_m} m · Höhendifferenz ca. ${p.hoehendifferenz_m} m · Sonne ${o.aufgang}–${o.untergang}` +
+      (z.dunkel ? '' : (z.quelle_dwd ? ' · Ampel aus ICON-D2 und DWD-Bericht' : ' · Ampel nur aus ICON-D2 (kein DWD-Bericht für diese Zeit)'))));
+  const k = $('#kacheln'), gr = $('#gruende');
+  if (z.dunkel) {
+    k.replaceChildren(kachel('Zeitstufe', 'dunkel', 'außerhalb des Tageslichts'));
+    gr.replaceChildren();
+  } else {
+    const ueber = z.nutzbar == null ? null : z.nutzbar - p.hoehe_m;
+    let thermik = '–', thermikSub = '';
+    if (ueber != null) {
+      if (ueber < D.thermik.mindesttiefe_m) { thermik = 'keine'; thermikSub = `Durchmischung unter ${D.thermik.mindesttiefe_m} m über Start`; }
+      else if (z.hangthermik) { thermik = `bis ${hoehe(z.nutzbar)}`; thermikSub = `nur mit Hangaufwind · Durchmischungshöhe, ${Math.round(ueber)} m über Start`; }
+      else if (!z.steigen || z.steigen < 0.3) { thermik = 'keine'; thermikSub = `Durchmischung bis ${hoehe(z.nutzbar)} MSL`; }
+      else {
+        thermik = hoehe(z.nutzbar);
+        thermikSub = `${Math.round(ueber)} m über Start · ${z.cumulus ? 'Cumulus-Basis' : 'Blauthermik'}` +
+          (z.spanne && !z.cumulus ? ` · Modelle ${hoehe(z.spanne[0])}–${hoehe(z.spanne[1])}` : '');
+      }
+    }
+    k.replaceChildren(
+      kachel('Startwind (80 m)', wind(z.sv, z.sd), z.abweichung == null ? '' : `${Math.round(z.abweichung)}° neben Startrichtung ${p.startrichtung}`),
+      kachel('Böen', `${num(z.boe)} km/h`, `Bodenwind 10 m: ${wind(z.v10, z.d10)}`),
+      kachel('Höhenwind', wind(z.hw_v, z.hw_d), z.hw_max == null ? '' : `Arbeitsschicht, bis ${Math.round(z.hw_max)} km/h` +
+        (z.scher_d == null ? '' : ` · dreht bis ${Math.round(z.scher_d)}° gegen den Startwind`)),
+      kachel(`Wind in ca. ${z.w15_z == null ? '1500' : Math.round(z.w15_z / 100) * 100} m`, wind(z.w15_v, z.w15_d), 'über der Arbeitsschicht, ohne Einfluss auf die Ampel'),
+      ...(z.dwd && z.dwd.w914_v != null ? [kachel('Wind in 914 m (DWD)', wind(z.dwd.w914_v, z.dwd.w914_d),
+        `Referenzstation, bis ${Math.round(z.dwd.w914_max)} km/h; geht in die Ampel ein` +
+        (z.dwd.wetter.length ? ` · Wetter: ${z.dwd.wetter.join(', ')}` : ''))] : []),
+      kachel('Steigen', !z.steigen || z.steigen < 0.05 ? '–' : `${num(z.steigen, 1)} m/s`, `Thermik: ${z.thermikwort}` +
+        (z.hangthermik ? ` · w* ${num(z.w_stern, 1)} m/s, unter dem Eigensinken` : '') +
+        (z.steigen_dwd == null ? '' : ` · DWD ${num(z.steigen_dwd, 1)} m/s`)),
+      kachel('Thermik bis (MSL)', thermik, thermikSub),
+      kachel('Wolken tief/mittel/hoch', z.wolken.map(w => num(w)).join(' / ') + ' %',
+        z.sicht == null ? '' : `geringste Sicht ${z.sicht >= 10000 ? 'über 10 km' : z.sicht >= 1000 ? num(z.sicht / 1000, 1) + ' km' : Math.round(z.sicht) + ' m'}`),
+      kachel('Modelle', z.urteil.startsWith('unsicher') ? 'unsicher' : z.urteil, z.urteil.startsWith('unsicher') ? z.urteil.slice(10) : Object.keys(z.modelle).join(', ')));
+    gr.replaceChildren(
+      ...z.gruende.map(t => h('li', { class: 'g ' + s0.cls }, t)),
+      ...(z.verlauf ? [h('li', {}, 'Stunden: ' + z.verlauf)] : []),
+      ...z.hinweise.map(t => h('li', {}, t)));
+    if (!z.gruende.length && !z.hinweise.length && !z.verlauf) gr.append(h('li', {}, 'keine Einschränkung nach den Grenzwerten'));
+  }
+  $('#notiz').textContent = p.hinweis || '';
+  const g = D.grenzwerte;
+  $('#rand').replaceChildren(
+    ...[['good', `Startfenster ±${g.richtung_gruen_grad}°`], ['warning', `schräg bis ±${g.richtung_gelb_grad}°`], ['serious', 'quer bis 90°'], ['critical', 'Lee']]
+      .map(([c, l]) => h('span', {}, h('i', { style: `--c:var(--${c})` }), l)));
+  drawRose();
+}
+
+function form(svg, art, x, y, farbe) {
+  if (art === 'kreis') return s('circle', { cx: x, cy: y, r: 6, fill: farbe, stroke: 'var(--surface)', 'stroke-width': 2 }, svg);
+  if (art === 'quadrat') return s('rect', { x: x - 5.5, y: y - 5.5, width: 11, height: 11, rx: 1.5, fill: farbe, stroke: 'var(--surface)', 'stroke-width': 2 }, svg);
+  return s('rect', { x: x - 5, y: y - 5, width: 10, height: 10, fill: 'var(--surface)', stroke: farbe, 'stroke-width': 2, transform: `rotate(45 ${x} ${y})` }, svg);
+}
+
+function drawRose() {
+  const o = ort(), z = o.stufen[st.stufe], p = o.ort, g = D.grenzwerte;
+  const stunde = st.stunde != null ? o.stunden[st.stunde] : null;
+  const q = stunde || (z.dunkel ? null : z);
+  $('#rosetitel').textContent = stunde ? `Wind um ${stunde.zeit.slice(11)} Uhr` : (z.dunkel ? 'Keine Werte (dunkel)' : `Wind im Mittel der Zeitstufe ${z.name}`);
+  const svg = $('#rose');
+  svg.replaceChildren();
+  const C = 160, RM = 92;
+  const werte = q ? [q.sv, q.v10, q.boe, q.hw_v].filter(v => v != null) : [];
+  const vmax = Math.max(30, Math.ceil(Math.max(0, ...werte) / 10) * 10);
+  const rr = v => Math.min(v, vmax) / vmax * RM;
+  const pol = (grad, r) => [C + r * Math.sin(grad * Math.PI / 180), C - r * Math.cos(grad * Math.PI / 180)];
+  const sektor = (a1, a2, ri, ro) => {
+    const spanne = (((a2 - a1) % 360) + 360) % 360, gross = spanne > 180 ? 1 : 0;
+    const [x1, y1] = pol(a1, ro), [x2, y2] = pol(a2, ro), [x3, y3] = pol(a2, ri), [x4, y4] = pol(a1, ri);
+    return `M${x1},${y1}A${ro},${ro} 0 ${gross} 1 ${x2},${y2}L${x3},${y3}A${ri},${ri} 0 ${gross} 0 ${x4},${y4}Z`;
+  };
+  for (let v = 10; v <= vmax; v += 10) {
+    s('circle', { cx: C, cy: C, r: rr(v), fill: 'none', stroke: 'var(--grid)' }, svg);
+    const [x, y] = pol(p.startrichtung_grad + 180, rr(v));
+    text(svg, x, y - 3, v, { 'text-anchor': 'middle' });
+  }
+  for (const a of [0, 90, 180, 270]) {
+    const [x1, y1] = pol(a, RM);
+    s('line', { x1: C, y1: C, x2: x1, y2: y1, stroke: 'var(--grid)' }, svg);
+    const [x, y] = pol(a, RM + 53);
+    text(svg, x, y + 4, ['N', 'O', 'S', 'W'][a / 90], { 'text-anchor': 'middle', class: 'ink' });
+  }
+  const sr = p.startrichtung_grad, gg = g.richtung_gruen_grad, ge = g.richtung_gelb_grad;
+  const band = (a1, a2, farbe) => s('path', { d: sektor(a1, a2, RM + 8, RM + 19), fill: `var(--${farbe})`, stroke: 'var(--surface)', 'stroke-width': 2 }, svg);
+  band(sr + 90, sr + 270, 'critical');
+  band(sr - 90, sr - ge, 'serious'); band(sr + ge, sr + 90, 'serious');
+  band(sr - ge, sr - gg, 'warning'); band(sr + gg, sr + ge, 'warning');
+  band(sr - gg, sr + gg, 'good');
+  const [ax, ay] = pol(sr, RM + 22), [bx, by] = pol(sr - 4.5, RM + 33), [cx, cy] = pol(sr + 4.5, RM + 33);
+  s('path', { d: `M${ax},${ay}L${bx},${by}L${cx},${cy}Z`, fill: 'var(--ink)' }, svg);
+
+  const leg = $('#roselegende');
+  leg.replaceChildren();
+  const zeile = (art, farbe, label, wert) => {
+    const mini = s('svg', { viewBox: '0 0 16 16' });
+    if (art === 'bogen') s('path', { d: 'M2,11 A8,8 0 0 1 14,11', fill: 'none', stroke: farbe, 'stroke-width': 3, 'stroke-linecap': 'round' }, mini);
+    else if (art === 'pfeil') s('path', { d: 'M8,2 L3,13 L13,13 Z', fill: farbe }, mini);
+    else form(mini, art, 8, 8, farbe);
+    leg.append(h('div', { class: 'rl' }, mini, h('span', {}, label), h('b', {}, wert)));
+  };
+  if (q) {
+    if (q.boe != null && q.d10 != null) {
+      const [x1, y1] = pol(q.d10 - 14, rr(q.boe)), [x2, y2] = pol(q.d10 + 14, rr(q.boe));
+      s('path', { d: `M${x1},${y1}A${rr(q.boe)},${rr(q.boe)} 0 0 1 ${x2},${y2}`, fill: 'none', stroke: 'var(--s2)', 'stroke-width': 3.5, 'stroke-linecap': 'round' }, svg);
+    }
+    const marke = (v, d, art, farbe, dick) => {
+      if (v == null || d == null) return;
+      const [x, y] = pol(d, rr(v));
+      s('line', { x1: C, y1: C, x2: x, y2: y, stroke: farbe, 'stroke-width': dick, 'stroke-linecap': 'round' }, svg);
+      form(svg, art, x, y, farbe);
+    };
+    marke(q.hw_v, q.hw_d, 'raute', 'var(--ink2)', 1.5);
+    marke(q.v10, q.d10, 'quadrat', 'var(--s3)', 1.5);
+    marke(q.sv, q.sd, 'kreis', 'var(--s1)', 2.5);
+    zeile('kreis', 'var(--s1)', 'Startwind 80 m', wind(q.sv, q.sd));
+    zeile('bogen', 'var(--s2)', 'Böen', `${num(q.boe)} km/h`);
+    zeile('quadrat', 'var(--s3)', 'Bodenwind 10 m', wind(q.v10, q.d10));
+    zeile('raute', 'var(--ink2)', 'Höhenwind', wind(q.hw_v, q.hw_d));
+  }
+  s('circle', { cx: C, cy: C, r: 2.5, fill: 'var(--axis)' }, svg);
+  zeile('pfeil', 'var(--ink)', 'Startrichtung', `${p.startrichtung} ${sr}°`);
+}
+
+/* ------------------------------------------------------------ Tagesverlauf */
+
+let G = null;
+
+function basis(id, H, top, bot, mitStunden) {
+  const o = ort(), svg = $(id);
+  svg.replaceChildren();
+  svg.setAttribute('viewBox', `0 0 ${G.W} ${H}`);
+  svg.setAttribute('height', H);
+  o.stufen.forEach((zs, zi) => {
+    const a = Math.max(0, zs.von - G.h0), b = Math.min(G.n, zs.bis - G.h0);
+    if (b <= a) return;
+    const x1 = G.L + a * G.bw, x2 = G.L + b * G.bw;
+    if (zi === st.stufe) s('rect', { x: x1, y: top, width: x2 - x1, height: H - top - bot, fill: 'var(--ink)', opacity: 0.05 }, svg);
+  });
+  if (mitStunden) {
+    const schritt = G.bw >= 34 ? 1 : G.bw >= 17 ? 2 : 3;
+    o.stunden.forEach((x, i) => { if (i % schritt === 0) text(svg, G.xc(i), H - 6, x.stunde + ' h', { 'text-anchor': 'middle' }); });
+  }
+  return svg;
+}
+function yAchse(svg, ticks, y, fmt) {
+  for (const t of ticks) {
+    s('line', { x1: G.L, x2: G.W - G.R, y1: y(t), y2: y(t), stroke: 'var(--grid)' }, svg);
+    text(svg, G.L - 6, y(t) + 4, fmt ? fmt(t) : t, { 'text-anchor': 'end' });
+  }
+}
+function linie(svg, werte, y, farbe) {
+  let d = '', offen = false;
+  werte.forEach((v, i) => {
+    if (v == null) { offen = false; return; }
+    d += `${offen ? 'L' : 'M'}${G.xc(i)},${y(v)}`;
+    offen = true;
+  });
+  return s('path', { d, fill: 'none', stroke: farbe, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+}
+function fadenkreuz(svg, top, bot, H) {
+  s('line', { class: 'xh', x1: 0, x2: 0, y1: top, y2: H - bot, stroke: 'var(--ink2)', visibility: 'hidden' }, svg);
+}
+
+function chartWind() {
+  const o = ort(), hrs = o.stunden, g = D.grenzwerte, H = 214, top = 20, bot = 24;
+  const svg = basis('#c-wind', H, top, bot, true);
+  const maxw = Math.max(0, ...hrs.map(x => Math.max(x.boe || 0, x.v80 || 0, x.v10 || 0)));
+  const ymax = Math.max(40, Math.ceil(maxw / 10) * 10);
+  const y = v => top + (1 - v / ymax) * (H - top - bot);
+  s('rect', { x: G.L, y: y(g.wind_max_gruen_kmh), width: G.W - G.L - G.R, height: y(g.wind_min_gruen_kmh) - y(g.wind_max_gruen_kmh), fill: 'var(--good)', opacity: 0.10 }, svg);
+  const ticks = []; for (let t = 0; t <= ymax; t += 10) ticks.push(t);
+  yAchse(svg, ticks, y);
+  for (const [wert, farbe, label] of [[g.boe_gelb_kmh, 'warning', 'Böen gelb ab '], [g.boe_rot_kmh, 'critical', 'Böen rot ab ']]) {
+    s('line', { x1: G.L, x2: G.W - G.R, y1: y(wert), y2: y(wert), stroke: `var(--${farbe})`, 'stroke-dasharray': '5 4' }, svg);
+    text(svg, G.W - G.R - 4, y(wert) - 4, label + wert, { 'text-anchor': 'end' });
+  }
+  o.stufen.forEach(zs => {
+    const a = Math.max(0, zs.von - G.h0), b = Math.min(G.n, zs.bis - G.h0);
+    if (b - a < 1 || (b - a) * G.bw < 70) return;
+    text(svg, G.L + (a + b) / 2 * G.bw, 12, zs.name, { 'text-anchor': 'middle', class: 'ink' });
+  });
+  linie(svg, hrs.map(x => x.v10), y, 'var(--s3)');
+  linie(svg, hrs.map(x => x.boe), y, 'var(--s2)');
+  linie(svg, hrs.map(x => x.v80), y, 'var(--s1)');
+  G.punkte = [['v10', '--s3'], ['boe', '--s2'], ['v80', '--s1']].map(([k, f]) =>
+    ({ k, y, e: s('circle', { r: 4.5, fill: `var(${f})`, stroke: 'var(--surface)', 'stroke-width': 2, visibility: 'hidden' }, svg) }));
+  fadenkreuz(svg, top, bot, H);
+}
+
+function chartAmpel() {
+  const o = ort(), hrs = o.stunden, H = 34, top = 2, zh = 28;
+  const svg = basis('#c-ampel', H, top, H - top - zh, false);
+  hrs.forEach((x, i) => {
+    const s0 = x.ampel == null ? DUNKEL : STATUS[x.ampel];
+    s('rect', { x: G.L + i * G.bw + 1, y: top, width: Math.max(1, G.bw - 2), height: zh, rx: 4,
+      style: `fill:color-mix(in srgb,var(--${s0.cls.slice(3)}) ${x.ampel == null ? 12 : 34}%,var(--surface))` }, svg);
+    if (G.bw >= 14) text(svg, G.xc(i), top + zh / 2 + 4, s0.icon, { 'text-anchor': 'middle', class: 'ink', style: 'font-weight:700;font-size:12px' });
+  });
+  fadenkreuz(svg, top, H - top - zh, H);
+}
+
+function chartRichtung() {
+  const o = ort(), hrs = o.stunden, H = 62, top = 2, zh = 38;
+  const svg = basis('#c-richtung', H, top, H - top - zh, false);
+  text(svg, G.L - 6, top + zh / 2 + 4, '80 m', { 'text-anchor': 'end' });
+  hrs.forEach((x, i) => {
+    const rk = RK[x.rk];
+    const cx = G.xc(i), cy = top + zh / 2;
+    s('rect', { x: G.L + i * G.bw + 1, y: top, width: Math.max(1, G.bw - 2), height: zh, rx: 4,
+      style: `fill:color-mix(in srgb,var(--${rk ? rk.farbe : 'neutral'}) ${rk && x.rk !== 'kaum' ? 30 : 12}%,var(--surface))` }, svg);
+    if (x.sd == null) return;
+    if (x.rk === 'kaum') s('circle', { cx, cy, r: 3, fill: 'none', stroke: 'var(--ink2)', 'stroke-width': 1.5 }, svg);
+    else s('path', { d: 'M0,-10 L0,9 M-5,3 L0,10 L5,3', fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      transform: `translate(${cx} ${cy}) rotate(${x.sd})` }, svg);
+    if (G.bw >= 30) text(svg, cx, top + zh + 14, komp(x.sd), { 'text-anchor': 'middle' });
+  });
+  fadenkreuz(svg, top, H - top - zh, H);
+}
+
+function chartSteigen() {
+  const o = ort(), hrs = o.stunden, H = 132, top = 14, bot = 24;
+  const svg = basis('#c-steigen', H, top, bot, true);
+  const maxs = Math.max(0, ...hrs.map(x => x.steigen || 0));
+  const ymax = Math.max(2, Math.ceil(maxs));
+  const y = v => top + (1 - v / ymax) * (H - top - bot);
+  const ticks = []; for (let t = 0; t <= ymax; t++) ticks.push(t);
+  yAchse(svg, ticks, y);
+  const bb = Math.min(24, Math.max(2, G.bw - 4)), y0 = y(0);
+  let imax = -1;
+  hrs.forEach((x, i) => {
+    if (!x.steigen || x.steigen < 0.05) return;
+    if (imax < 0 || x.steigen > hrs[imax].steigen) imax = i;
+    const x0 = G.xc(i) - bb / 2, yt = y(x.steigen), r = Math.min(4, y0 - yt);
+    s('path', { d: `M${x0},${y0}V${yt + r}Q${x0},${yt} ${x0 + r},${yt}H${x0 + bb - r}Q${x0 + bb},${yt} ${x0 + bb},${yt + r}V${y0}Z`, fill: 'var(--s7)' }, svg);
+  });
+  if (imax >= 0) text(svg, G.xc(imax), y(hrs[imax].steigen) - 5, num(hrs[imax].steigen, 1), { 'text-anchor': 'middle', class: 'ink' });
+  else {
+    const wmax = Math.max(0, ...hrs.map(x => x.w_stern || 0));
+    const hang = o.stufen.some(z => z.hangthermik);
+    text(svg, (G.L + G.W - G.R) / 2, top + (H - top - bot) / 2 + 4,
+      hang ? `w* bis ${num(wmax, 1)} m/s – trägt nur mit Hangaufwind` : 'keine nutzbare Thermik an diesem Tag', { 'text-anchor': 'middle', class: 'ink' });
+  }
+  s('line', { x1: G.L, x2: G.W - G.R, y1: y0, y2: y0, stroke: 'var(--axis)' }, svg);
+  fadenkreuz(svg, top, bot, H);
+}
+
+function chartHoehe() {
+  const o = ort(), hrs = o.stunden, z0 = o.ort.hoehe_m, H = 204, top = 12, bot = 24;
+  const svg = basis('#c-hoehe', H, top, bot, true);
+  const maxo = Math.max(z0 + 800, ...hrs.map(x => x.obergrenze || 0));
+  const ymin = Math.floor(z0 / 100) * 100, ymax = Math.ceil((maxo + 100) / 500) * 500;
+  const y = v => top + (1 - (Math.min(v, ymax + 400) - ymin) / (ymax - ymin)) * (H - top - bot);
+  const ticks = []; for (let t = Math.ceil(ymin / 500) * 500; t <= ymax; t += 500) ticks.push(t);
+  yAchse(svg, ticks, y, t => t.toLocaleString('de-DE'));
+  const clip = s('clipPath', { id: 'clip-hoehe' }, svg);
+  s('rect', { x: G.L, y: top, width: G.W - G.L - G.R, height: H - top - bot }, clip);
+  const gr = s('g', { 'clip-path': 'url(#clip-hoehe)' }, svg);
+  const mit = hrs.map((x, i) => [i, x.nutzbar]).filter(a => a[1] != null);
+  if (mit.length > 1) {
+    const d = mit.map(([i, v], k) => `${k ? 'L' : 'M'}${G.xc(i)},${y(v)}`).join('') +
+      `L${G.xc(mit[mit.length - 1][0])},${y(z0)}L${G.xc(mit[0][0])},${y(z0)}Z`;
+    s('path', { d, fill: 'var(--s7)', opacity: 0.10 }, gr);
+  }
+  linie(gr, hrs.map(x => x.lcl), y, 'var(--s5)');
+  linie(gr, hrs.map(x => x.obergrenze), y, 'var(--s7)');
+  s('line', { x1: G.L, x2: G.W - G.R, y1: y(z0), y2: y(z0), stroke: 'var(--axis)' }, svg);
+  text(svg, G.W - G.R - 4, y(z0) - 4, `Startplatz ${z0} m`, { 'text-anchor': 'end' });
+  G.punkteH = [['lcl', '--s5'], ['obergrenze', '--s7']].map(([k, f]) =>
+    ({ k, y, e: s('circle', { r: 4.5, fill: `var(${f})`, stroke: 'var(--surface)', 'stroke-width': 2, visibility: 'hidden' }, gr) }));
+  fadenkreuz(svg, top, bot, H);
+}
+
+function chartWolken() {
+  const o = ort(), hrs = o.stunden, zh = 18, top = 2, bot = 24;
+  const reihen = [['hoch', 'wolken_hoch'], ['mittel', 'wolken_mittel'], ['tief', 'wolken_tief'], ['Regen', 'regen']];
+  const H = top + reihen.length * (zh + 2) + bot;
+  const svg = basis('#c-wolken', H, top, bot, true);
+  reihen.forEach(([label, k], r) => {
+    const yy = top + r * (zh + 2);
+    text(svg, G.L - 6, yy + zh / 2 + 4, label, { 'text-anchor': 'end' });
+    hrs.forEach((x, i) => {
+      const v = x[k];
+      const anteil = v == null ? 0 : (k === 'regen' ? Math.min(1, v / 2) : v / 100);
+      s('rect', { x: G.L + i * G.bw + 1, y: yy, width: Math.max(1, G.bw - 2), height: zh, rx: 3,
+        fill: k === 'regen' ? 'var(--rain)' : 'var(--cloud)', opacity: 0.05 + 0.8 * anteil }, svg);
+    });
+  });
+  fadenkreuz(svg, top, bot, H);
+}
+
+function renderCharts() {
+  const o = ort(), wrap = $('#charts');
+  const leg = $('#leg-rk');
+  leg.replaceChildren(...Object.values(RK).map(r => h('span', { class: 'leg', style: `--c:var(--${r.farbe});margin-right:12px` }, h('i', { class: 'box' }), r.label)));
+  if (!o.stunden.length) return;
+  const W = Math.max(320, wrap.clientWidth), L = 46, R = 14, n = o.stunden.length;
+  G = { W, L, R, n, bw: (W - L - R) / n, h0: o.stunden[0].stunde };
+  G.xc = i => L + (i + 0.5) * G.bw;
+  chartAmpel(); chartWind(); chartRichtung(); chartSteigen(); chartHoehe(); chartWolken();
+  zeigeStunde(st.stunde, null);
+}
+
+function tipZeile(tip, farbe, label, wert) {
+  const links = h('span', {});
+  if (farbe) links.append(h('i', { class: 'k', style: `--c:var(${farbe})` }));
+  links.append(label);
+  tip.append(h('div', { class: 'r' }, links, h('b', {}, wert)));
+}
+
+function zeigeStunde(i, py) {
+  const o = ort(), wrap = $('#charts'), tip = $('#tip');
+  const vorher = st.stunde;
+  st.stunde = i;
+  wrap.querySelectorAll('.xh').forEach(l => {
+    if (i == null) l.setAttribute('visibility', 'hidden');
+    else { l.setAttribute('x1', G.xc(i)); l.setAttribute('x2', G.xc(i)); l.setAttribute('visibility', 'visible'); }
+  });
+  for (const p of [...(G.punkte || []), ...(G.punkteH || [])]) {
+    const v = i == null ? null : o.stunden[i][p.k];
+    if (v == null) p.e.setAttribute('visibility', 'hidden');
+    else { p.e.setAttribute('cx', G.xc(i)); p.e.setAttribute('cy', p.y(v)); p.e.setAttribute('visibility', 'visible'); }
+  }
+  if (i == null) { tip.style.display = 'none'; if (vorher != null) drawRose(); return; }
+  const x = o.stunden[i], rk = RK[x.rk];
+  tip.replaceChildren(h('h3', {}, `${x.zeit.slice(11)} Uhr${x.hell ? '' : ' (dunkel)'}`));
+  if (x.ampel != null) {
+    tipZeile(tip, null, 'Ampel', STATUS[x.ampel].label);
+    if (x.ampel_gruende.length) tip.append(h('div', { style: 'color:var(--ink2);padding:0 0 4px' }, x.ampel_gruende.join(' · ')));
+  }
+  tipZeile(tip, '--s1', 'Startwind 80 m', wind(x.v80, x.d80));
+  tipZeile(tip, '--s2', 'Böen', `${num(x.boe)} km/h`);
+  tipZeile(tip, '--s3', 'Bodenwind 10 m', wind(x.v10, x.d10));
+  tipZeile(tip, null, 'Höhenwind', wind(x.hw_v, x.hw_d));
+  tipZeile(tip, null, 'Wind ca. 1500 m', wind(x.w15_v, x.w15_d));
+  const dw = dwdStunde(x.zeit);
+  if (dw && dw.w914) tipZeile(tip, null, 'DWD Wind 914 m', wind(dw.w914[0], dw.w914[1]));
+  if (dw && dw.v10 != null) tipZeile(tip, null, 'DWD Bodenwind', `${wind(dw.v10, dw.d10)}, Böen ${num(dw.boe)}`);
+  tipZeile(tip, null, 'zum Startfenster', x.abweichung == null ? '–' : `${Math.round(x.abweichung)}° · ${rk ? rk.label : '–'}`);
+  tipZeile(tip, '--s7', 'Steigen', x.steigen >= 0.05 ? `${num(x.steigen, 1)} m/s` : '–');
+  tipZeile(tip, '--s7', 'Thermikobergrenze', hoehe(x.obergrenze));
+  tipZeile(tip, '--s5', 'Kondensationshöhe', hoehe(x.lcl));
+  tipZeile(tip, null, 'Wolken t/m/h', `${num(x.wolken_tief)} / ${num(x.wolken_mittel)} / ${num(x.wolken_hoch)} %`);
+  tipZeile(tip, null, 'Regen', `${num(x.regen, 1)} mm`);
+  if (x.sicht != null) tipZeile(tip, null, 'Sicht', x.sicht >= 10000 ? 'über 10 km' : x.sicht >= 1000 ? `${num(x.sicht / 1000, 1)} km` : `${Math.round(x.sicht)} m`);
+  tipZeile(tip, null, 'Temperatur / Taupunkt', `${num(x.t, 1)} / ${num(x.td, 1)} °C`);
+  tip.style.display = 'block';
+  const links = G.xc(i) + 16 + 250 > G.W ? G.xc(i) - 16 - 250 : G.xc(i) + 16;
+  tip.style.left = Math.max(0, links) + 'px';
+  tip.style.top = Math.max(0, Math.min((py == null ? 30 : py - 40), wrap.clientHeight - tip.offsetHeight - 4)) + 'px';
+  if (vorher !== i) drawRose();
+}
+
+function initCharts() {
+  const wrap = $('#charts');
+  wrap.addEventListener('pointermove', e => {
+    if (!G) return;
+    const r = wrap.getBoundingClientRect();
+    const i = Math.floor((e.clientX - r.left - G.L) / G.bw);
+    if (i < 0 || i >= G.n) zeigeStunde(null, null);
+    else zeigeStunde(i, e.clientY - r.top);
+  });
+  wrap.addEventListener('pointerleave', () => { if (document.activeElement !== wrap) zeigeStunde(null, null); });
+  wrap.addEventListener('blur', () => zeigeStunde(null, null));
+  wrap.addEventListener('keydown', e => {
+    if (!G) return;
+    if (e.key === 'Escape') { zeigeStunde(null, null); return; }
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const start = st.stunde == null ? (e.key === 'ArrowRight' ? -1 : G.n) : st.stunde;
+    zeigeStunde(Math.max(0, Math.min(G.n - 1, start + (e.key === 'ArrowRight' ? 1 : -1))), null);
+  });
+  let warte = null;
+  window.addEventListener('resize', () => { clearTimeout(warte); warte = setTimeout(() => { st.stunde = null; renderCharts(); }, 120); });
+}
+
+/* ------------------------------------------------------------ Tabellen, Livewind */
+
+function tabelle(kopf, zeilen) {
+  const t = h('table', {});
+  t.append(h('thead', {}, h('tr', {}, ...kopf.map(k => h('th', {}, k)))));
+  t.append(h('tbody', {}, ...zeilen.map(z => h('tr', {}, ...z.map(c => h('td', {}, c))))));
+  return t;
+}
+
+function renderModelle() {
+  const o = ort(), namen = D.modellnamen;
+  const zeilen = o.stufen.filter(z => !z.dunkel).map(z => [
+    `${z.name} ${z.von}–${z.bis}`,
+    ...namen.map(n => (z.modelle[n] ? `${komp(z.modelle[n][1])} ${Math.round(z.modelle[n][1])}° · ${Math.round(z.modelle[n][0])} / ${num(z.modelle[n][2])}` : '–')),
+    z.urteil]);
+  $('#h-modelle').textContent = `Modellvergleich Startwind ${D.startwind_quelle === '80m' ? '80 m' : '10 m'}`;
+  $('#modelle').replaceChildren(
+    tabelle(['Zeitstufe', ...namen.map(n => n + ' (Mittel / Böe 10 m, km/h)'), 'Urteil'], zeilen));
+}
+
+function renderTabelle() {
+  const o = ort();
+  const zeilen = o.stunden.map(x => [
+    x.zeit.slice(11), x.ampel == null ? '–' : ampelMarke(x.ampel),
+    wind(x.v80, x.d80), num(x.boe), wind(x.v10, x.d10), wind(x.hw_v, x.hw_d), wind(x.w15_v, x.w15_d),
+    x.sicht == null ? '–' : (x.sicht >= 1000 ? `${num(x.sicht / 1000, 1)} km` : `${Math.round(x.sicht)} m`),
+    x.abweichung == null ? '–' : `${Math.round(x.abweichung)}° ${RK[x.rk] ? RK[x.rk].label : ''}`,
+    num(x.steigen, 1), hoehe(x.obergrenze),
+    Object.entries(x.obergrenzen).map(([n, v]) => `${n} ${Math.round(v / 10) * 10}`).join(', ') || '–',
+    hoehe(x.lcl),
+    Object.entries(x.grenzschicht).map(([n, v]) => `${n} ${Math.round((o.ort.hoehe_m + v) / 10) * 10}`).join(', ') || '–',
+    x.scher_v == null ? '–' : `${x.scher_v >= 0 ? '+' : '−'}${Math.round(Math.abs(x.scher_v))} km/h` + (x.scher_d == null ? '' : `, ${Math.round(x.scher_d)}°`),
+    `${num(x.wolken_tief)}/${num(x.wolken_mittel)}/${num(x.wolken_hoch)}`, num(x.regen, 1),
+    `${num(x.t, 1)} / ${num(x.td, 1)}`, num(x.waermestrom_auf), num(x.cape),
+    (x.ampel_gruende || []).join('; ') || '–']);
+  $('#tabelle').replaceChildren(tabelle(
+    ['Zeit', 'Ampel', 'Startwind 80 m', 'Böe km/h', 'Bodenwind 10 m', 'Höhenwind', 'Wind ca. 1500 m', 'Sicht', 'zum Startfenster', 'Steigen m/s', 'Thermikobergrenze',
+      'Obergrenze je Modell (m MSL)', 'Kondensationshöhe', 'Grenzschicht (≈ m MSL)', 'Scherung zur Arbeitshöhe', 'Wolken t/m/h %', 'Regen mm', 'T / Taupunkt °C', 'Wärmestrom W/m²', 'CAPE', 'Gründe der Stundenampel'],
+    zeilen));
+  $('#tabdetails').querySelector('summary').textContent = `Stundentabelle ${o.ort.name}`;
+}
+
+function dwdStunde(zeit) {
+  return D.dwd ? D.dwd.stunden.find(s => s.zeit === zeit) : null;
+}
+
+function renderDwd() {
+  const o = ort(), ziel = $('#dwd'), meta = $('#dwd-meta'), dwd = D.dwd;
+  if (!dwd) {
+    $('#h-dwd').textContent = 'DWD-Segelflugvorhersage';
+    meta.textContent = D.rueckblick ? 'Im Rückblick nicht verfügbar.' : 'Kein Bericht abgerufen.';
+    ziel.replaceChildren();
+    return;
+  }
+  $('#h-dwd').textContent = `DWD-Segelflugvorhersage · ${dwd.gebiet}`;
+  meta.replaceChildren(`Referenzstation ${dwd.station} · ausgegeben ${dwd.ausgabe} · ${dwd.modell} · zweite Quelle der Ampel am Tag des Berichts (Böen, Wind in 914 m, Wettercode, tiefe Bewölkung) · `,
+    h('a', { href: dwd.url, target: '_blank', rel: 'noopener' }, 'Quelle: Deutscher Wetterdienst'));
+  const stunden = tag().datum === dwd.datum ? dwd.stunden.filter(s => s.zeit.startsWith(dwd.datum)) : [];
+  if (!stunden.length) {
+    const d = dwd.datum.split('-');
+    ziel.replaceChildren(h('p', { class: 'notiz', style: 'margin:0' }, `Der Bericht gilt für den ${d[2]}.${d[1]}.${d[0]}; für den gewählten Tag liegt keiner vor.`));
+    return;
+  }
+  const eigen = Object.fromEntries(o.stunden.map(x => [x.zeit, x]));
+  const w = p => (p ? wind(p[0], p[1]) : '–');
+  const achtel = v => (v == null ? '–' : Math.round(v / 12.5));
+  const zeilen = stunden.map(s => {
+    const x = eigen[s.zeit];
+    return [
+      s.zeit.slice(11),
+      wind(s.v10, s.d10), x ? wind(x.v10, x.d10) : '–',
+      num(s.boe), x ? num(x.boe) : '–',
+      w(s.w914), x ? wind(x.hw_v, x.hw_d) : '–',
+      w(s.w1524), x ? wind(x.w15_v, x.w15_d) : '–',
+      w(s.w3048),
+      `${num(s.wolken_tief)}/${num(s.wolken_mittel)}/${num(s.wolken_hoch)}`,
+      x ? `${achtel(x.wolken_tief)}/${achtel(x.wolken_mittel)}/${achtel(x.wolken_hoch)}` : '–',
+      s.wetter || '–',
+      `${num(s.t)} / ${num(s.td)}`, x ? `${num(x.t, 1)} / ${num(x.td, 1)}` : '–',
+      s.arbeitshoehe == null ? '–' : hoehe(s.arbeitshoehe), num(s.steigen, 1), x ? num(x.steigen, 1) : '–',
+    ];
+  });
+  ziel.replaceChildren(tabelle(
+    ['Zeit', 'Bodenwind DWD', `Bodenwind 10 m ${o.ort.name}`, 'Böen DWD', 'Böen eigen', 'Wind 914 m DWD', 'Höhenwind eigen',
+      'Wind 1524 m DWD', 'Wind ca. 1500 m eigen', 'Wind 3048 m DWD', 'Wolken t/m/h DWD (Achtel)', 'Wolken t/m/h eigen (Achtel)',
+      'Wetter DWD', 'T / Taupunkt DWD °C', 'T / Taupunkt eigen °C', 'Arbeitshöhe DWD', 'Steigen DWD m/s', 'Steigen eigen m/s'],
+    zeilen));
+}
+
+function ampelMarke(stufe) {
+  const s0 = STATUS[stufe];
+  return h('span', { class: 'amp ' + s0.cls }, h('span', { class: 'pkt' }, s0.icon), s0.label);
+}
+
+function renderRueck() {
+  const rs = D.rueckschau, sek = $('#sek-rueck');
+  const eintrag = rs ? rs.orte.find(x => x.name === ort().ort.name) : null;
+  sek.hidden = !rs;
+  if (!rs) return;
+  const d = rs.datum.split('-');
+  $('#h-rueck').textContent = `Rückschau ${d[2]}.${d[1]}.${d[0]}: Prognose gegen Messung`;
+  const meta = $('#rueck-meta'), ziel = $('#rueck');
+  if (!eintrag) {
+    meta.textContent = `Für ${ort().ort.name} liegen keine Messwerte oder kein gespeicherter Lauf vor.`;
+    ziel.replaceChildren();
+    return;
+  }
+  meta.textContent = `${eintrag.name}, Holfuy-Station ${eintrag.station} · Prognose aus dem ersten gespeicherten Lauf des Tages (erstellt ${rs.lauf}) · ` +
+    'Windampel = Ampel nur aus Richtung, Stärke und Böen · Abweichung = Prognose minus Messung';
+  const vz = (x, einheit) => (x == null ? '–' : `${x >= 0 ? '+' : '−'}${Math.round(Math.abs(x))}${einheit}`);
+  ziel.replaceChildren(tabelle(
+    ['Zeitstufe', 'Prognose Startwind 80 m', 'Prognose Böen', 'Ampel Prognose', 'davon Wind', 'Messung Wind', 'Messung Böen',
+      'Windampel gemessen', 'Abweichung Richtung', 'Abweichung Stärke', 'Abweichung Böen'],
+    eintrag.zeilen.map(z => [
+      `${z.zeitstufe} ${z.von}–${z.bis}` + (z.vor_beginn ? '' : ' (Lauf nach Beginn)'),
+      wind(z.p_sv, z.p_sd), `${num(z.p_boe)} km/h`, ampelMarke(z.p_stufe), ampelMarke(z.p_windstufe),
+      wind(z.m_sv, z.m_sd), `${num(z.m_boe)} km/h`, ampelMarke(z.m_stufe),
+      vz(z.d_richtung, '°'), vz(z.d_sv, ' km/h'), vz(z.d_boe, ' km/h')])));
+}
+
+function renderLive() {
+  const p = ort().ort;
+  $('#h-live').textContent = `Livewind ${p.name}`;
+  const rahmen = $('#liveframe');
+  rahmen.replaceChildren();
+  const teile = [];
+  if (p.holfuy_station) {
+    teile.push(h('button', {
+      class: 'knopf',
+      onclick: () => rahmen.replaceChildren(h('iframe', {
+        src: `https://widget.holfuy.com/?station=${encodeURIComponent(p.holfuy_station)}&su=km/h&t=C&lang=de&mode=detailed`,
+        title: `Holfuy-Messwerte ${p.name}`, loading: 'lazy',
+      })),
+    }, 'Messwerte der Holfuy-Station laden'));
+  }
+  if (p.livewind) teile.push(h('a', { href: p.livewind, target: '_blank', rel: 'noopener' }, 'Holfuy-Seite öffnen'));
+  if (p.gelaendeinfo) teile.push(h('a', { href: p.gelaendeinfo, target: '_blank', rel: 'noopener' }, 'Geländeinfo DFCI'));
+  $('#live').replaceChildren(...teile);
+}
+
+function render() {
+  renderFilter(); renderZusammenfassung(); renderUeberblick(); renderDetail(); renderCharts(); renderModelle(); renderDwd(); renderRueck(); renderTabelle(); renderLive();
+}
+
+if (!D || !D.tage || !D.tage.length || !D.tage[0].orte.length) {
+  document.querySelector('main').replaceChildren(h('p', {}, 'Keine Vorhersagedaten eingebettet. Bitte flugwetter.py ausführen.'));
+} else {
+  renderKopf(); besteWahl(); initCharts(); render();
+}
+</script>
+</body>
+</html>

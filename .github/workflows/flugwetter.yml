@@ -1,0 +1,60 @@
+name: Flugwetter-Seite aktualisieren
+
+# Täglich um 8:00 und 9:00 Uhr Ortszeit (Europe/Berlin). GitHub rechnet in UTC und kennt
+# keine Sommerzeit: Der Zeitplan feuert deshalb um 6, 7 und 8 Uhr UTC, und der erste
+# Schritt lässt nur die Läufe durch, die in Berlin auf 8 oder 9 Uhr fallen.
+on:
+  schedule:
+    - cron: "0 6,7,8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  TZ: Europe/Berlin
+
+jobs:
+  seite:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Ortszeit prüfen
+        id: zeit
+        run: |
+          stunde=$(date +%H)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$stunde" = "08" ] || [ "$stunde" = "09" ]; then
+            echo "laufen=ja" >> "$GITHUB_OUTPUT"
+          else
+            echo "Ortszeit $stunde Uhr: kein Lauf."
+          fi
+      - uses: actions/checkout@v4
+        if: steps.zeit.outputs.laufen == 'ja'
+      - uses: actions/setup-python@v5
+        if: steps.zeit.outputs.laufen == 'ja'
+        with:
+          python-version: "3.14"
+      - name: Vorhersage rechnen
+        if: steps.zeit.outputs.laufen == 'ja'
+        run: |
+          python flugwetter.py --ohne-abgleich > /dev/null
+          mkdir -p site
+          cp vorhersagen/flugwetter_aktuell.html site/index.html
+      - uses: actions/configure-pages@v5
+        if: steps.zeit.outputs.laufen == 'ja'
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.zeit.outputs.laufen == 'ja'
+        with:
+          path: site
+      - name: Veröffentlichen
+        id: deployment
+        if: steps.zeit.outputs.laufen == 'ja'
+        uses: actions/deploy-pages@v4

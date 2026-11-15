@@ -1,0 +1,94 @@
+{
+  "gebiet": "Kinding / Altmühltal",
+  "zeitzone": "Europe/Berlin",
+  "tage": 2,
+  "startplaetze": [
+    {
+      "name": "Böhming",
+      "lat": 48.94468,
+      "lon": 11.35016,
+      "hoehe_m": 478,
+      "hoehendifferenz_m": 80,
+      "startrichtung": "Ost",
+      "startrichtung_grad": 90,
+      "livewind": "https://holfuy.com/de/weather/407",
+      "holfuy_station": 407,
+      "hinweis": "Start laut DFCI nur bei anstehendem Ostwind. Leewirbel: nicht in geringer Höhe zurück zur Hangkante fliegen.",
+      "gelaendeinfo": "https://www.dfci.de/boehming"
+    },
+    {
+      "name": "Oberemmendorf",
+      "lat": 48.98949,
+      "lon": 11.44364,
+      "hoehe_m": 515,
+      "hoehendifferenz_m": 145,
+      "startrichtung": "Nordwest",
+      "startrichtung_grad": 315,
+      "livewind": "https://holfuy.com/de/weather/400",
+      "holfuy_station": 400,
+      "hinweis": "Start laut DFCI nur bei anstehendem Nordwestwind. Schneisenstart, Leewirbel beachten. Überflugverbot Obereggersberg: siehe Geländeinfo.",
+      "gelaendeinfo": "https://www.dfci.de/oberemmendorf"
+    }
+  ],
+  "zeitstufen": [
+    {"name": "Vormittag", "von": 9, "bis": 11},
+    {"name": "Mittag", "von": 11, "bis": 14},
+    {"name": "Nachmittag", "von": 14, "bis": 17},
+    {"name": "Abend", "von": 17, "bis": 20}
+  ],
+  "impressum": {
+    "name": "",
+    "anschrift": "",
+    "email": ""
+  },
+  "startwind_quelle": "80m",
+  "vergleichsflaeche_hpa": 850,
+  "dwd_segelflug": {
+    "aktiv": true,
+    "url": "https://www.dwd.de/DE/fachnutzer/luftfahrt/teaser/gebietsvorhersagen_segelflug/node_63"
+  },
+  "grenzwerte": {
+    "richtung_gruen_grad": 30,
+    "richtung_gelb_grad": 45,
+    "wind_kaum_kmh": 5,
+    "wind_min_gruen_kmh": 8,
+    "wind_max_gruen_kmh": 20,
+    "wind_rot_kmh": 25,
+    "boe_gelb_kmh": 25,
+    "boe_rot_kmh": 30,
+    "boeenspanne_gelb_kmh": 10,
+    "hoehenwind_gelb_kmh": 25,
+    "hoehenwind_rot_kmh": 35,
+    "dwd_hoehenwind_gelb_kmh": 25,
+    "dwd_hoehenwind_rot_kmh": 35,
+    "scherung_richtung_grad": 60,
+    "scherung_staerke_kmh": 15,
+    "tiefwolken_gelb_prozent": 75,
+    "wolkenbasis_rot_m": 150,
+    "sicht_rot_m": 1500,
+    "sicht_gelb_m": 5000,
+    "cape_gelb": 500,
+    "niederschlag_rot_mm": 0.1,
+    "soaring_min_kmh": 12
+  },
+  "thermik": {
+    "eigensinken_ms": 1.1,
+    "ueberwaerme_k": 0.5,
+    "mindesttiefe_m": 150,
+    "hangthermik_w_stern_ms": 0.5,
+    "waermestrom_vorzeichen": -1,
+    "lcl_m_je_kelvin": 125
+  },
+  "modellvergleich": {
+    "richtung_streuung_grad": 45,
+    "staerke_streuung_kmh": 8
+  },
+  "modelle": {
+    "haupt": {"id": "icon_d2", "name": "ICON-D2", "druckflaechen": [1000, 975, 950, 850, 700, 600]},
+    "vergleich": [
+      {"id": "icon_eu", "name": "ICON-EU", "druckflaechen": [1000, 950, 925, 900, 850, 800, 700, 600]},
+      {"id": "gfs_seamless", "name": "GFS", "druckflaechen": [1000, 975, 950, 925, 900, 875, 850, 825, 800, 775, 750, 700, 600], "grenzschicht": true},
+      {"id": "ecmwf_ifs", "name": "IFS", "druckflaechen": [], "grenzschicht": true}
+    ]
+  }
+}

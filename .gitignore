@@ -1,0 +1,8 @@
+# Nur Skript, Konfiguration, Vorlage und Zeitplan sind öffentlich.
+CLAUDE.md
+_PRUEFUNG_*/
+messwerte/
+vorhersagen/
+__pycache__/
+site/
+_PROJEKTUEBERSICHT.md
